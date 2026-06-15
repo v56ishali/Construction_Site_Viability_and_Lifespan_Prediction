@@ -13,3 +13,4 @@ psycopg2-binary
 pillow
 gunicorn
 python-dotenv
+flask-cors
