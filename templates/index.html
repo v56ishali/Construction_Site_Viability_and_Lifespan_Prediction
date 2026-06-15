@@ -7,11 +7,12 @@
 	<title>AI Construction Site Selection</title>
 	<link rel="preconnect" href="https://fonts.googleapis.com" />
 	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+	<link rel="icon" href="data:," />
 	<link
 		href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Crimson+Pro:wght@400;600&display=swap"
 		rel="stylesheet" />
-	<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-		integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+	<link rel="stylesheet" href="{{ url_for('static', filename='leaflet/lib-map.css') }}" />
+	<script src="{{ url_for('static', filename='leaflet/lib-map.js') }}"></script>
 	<style>
 		:root {
 			--bg-1: #f7f2ea;
@@ -572,6 +573,184 @@
 				height: 360px;
 			}
 		}
+
+		/* Tamil Voice Report Styles */
+		.voice-report-panel {
+			margin-top: 24px;
+			padding: 20px;
+			background: var(--panel-2);
+			border: 1px solid var(--border);
+			border-radius: 18px;
+			display: none;
+			flex-direction: column;
+			align-items: center;
+			gap: 16px;
+			animation: slideUp 0.4s ease-out;
+		}
+
+		@keyframes slideUp {
+			from {
+				opacity: 0;
+				transform: translateY(20px);
+			}
+
+			to {
+				opacity: 1;
+				transform: translateY(0);
+			}
+		}
+
+		.audio-btn-container {
+			position: relative;
+			display: flex;
+			justify-content: center;
+			align-items: center;
+		}
+
+		.audio-btn {
+			width: 60px;
+			height: 60px;
+			border-radius: 50%;
+			background: #1e3a8a;
+			/* Dark Blue */
+			border: none;
+			color: white;
+			font-size: 24px;
+			cursor: pointer;
+			display: flex;
+			justify-content: center;
+			align-items: center;
+			transition: all 0.3s ease;
+			box-shadow: 0 4px 12px rgba(30, 58, 138, 0.3);
+			z-index: 2;
+		}
+
+		.audio-btn:hover {
+			transform: scale(1.05);
+			background: #172554;
+		}
+
+		/* Pulsing animation when speaking */
+		.audio-btn.speaking {
+			background: #ef4444;
+			/* Red */
+			box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+			animation: pulse-red 1.5s infinite;
+		}
+
+		@keyframes pulse-red {
+			0% {
+				box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+			}
+
+			70% {
+				box-shadow: 0 0 0 15px rgba(239, 68, 68, 0);
+			}
+
+			100% {
+				box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+			}
+		}
+
+		.voice-controls {
+			display: flex;
+			gap: 12px;
+			margin-top: 8px;
+		}
+
+		.control-btn {
+			padding: 8px 12px;
+			border-radius: 10px;
+			border: 1px solid var(--border);
+			background: white;
+			cursor: pointer;
+			font-size: 14px;
+			display: flex;
+			align-items: center;
+			gap: 6px;
+			transition: background 0.2s;
+		}
+
+		.control-btn:hover {
+			background: #f8fafc;
+		}
+
+		.script-display {
+			width: 100%;
+			max-width: 500px;
+			height: 80px;
+			background: #0f172a;
+			/* Very dark */
+			color: #e2e8f0;
+			padding: 12px;
+			border-radius: 12px;
+			font-family: 'Noto Sans Tamil', 'Space Grotesk', sans-serif;
+			font-size: 14px;
+			line-height: 1.6;
+			overflow-y: auto;
+			text-align: center;
+			box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3), 0 0 15px rgba(30, 58, 138, 0.2);
+			border: 1px solid #1e293b;
+		}
+
+		.script-display .current-sentence {
+			color: #38bdf8;
+			/* Sky Blue */
+			font-weight: 600;
+			text-shadow: 0 0 8px rgba(56, 189, 248, 0.4);
+		}
+
+		.voice-settings {
+			display: flex;
+			flex-wrap: wrap;
+			justify-content: center;
+			gap: 16px;
+			font-size: 12px;
+			color: var(--muted);
+			margin-top: 8px;
+		}
+
+		.voice-settings select {
+			padding: 4px 8px;
+			border-radius: 6px;
+			border: 1px solid var(--border);
+			font-size: 12px;
+		}
+
+		.progress-text {
+			font-size: 12px;
+			color: var(--muted);
+			font-weight: 500;
+		}
+
+		.compatibility-notice {
+			font-size: 11px;
+			color: #64748b;
+			margin-top: 10px;
+		}
+
+		.btn-whatsapp {
+			background: #25D366;
+			color: white;
+			border-color: #25D366;
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			gap: 6px;
+		}
+
+		.btn-whatsapp:hover {
+			background: #128C7E;
+			border-color: #128C7E;
+			color: white;
+		}
+
+		.btn-whatsapp:disabled {
+			background: #d1d5db;
+			border-color: #d1d5db;
+			color: #9ca3af;
+			cursor: not-allowed;
+		}
 	</style>
 </head>
 
@@ -725,6 +904,10 @@
 							treatment required.</div>
 					</div>
 					<div class="results">
+						<div class="result-card" id="locationNameCard" style="grid-column: 1 / -1; display: none;">
+							<h4>Analyzed Location</h4>
+							<p id="locationNameDisplay" style="font-weight: 500; color: #1e3a8a;">--</p>
+						</div>
 						<div class="result-card">
 							<h4>Feasibility Score</h4>
 							<p id="feasibility">--</p>
@@ -860,6 +1043,41 @@
 						</div>
 					</div>
 
+
+					<div class="panel-title">Tamil Voice Report</div>
+					<div class="voice-report-panel" id="voiceReportPanel">
+						<div class="audio-btn-container">
+							<button class="audio-btn" id="voiceReportBtn" title="தமிழில் கேளுங்கள்">🔊</button>
+						</div>
+
+						<div class="progress-text" id="voiceProgress">வாக்கியம் --/--</div>
+
+						<div class="script-display" id="scriptDisplay">
+							அறிக்கையைப் பெற 'Analyze Site' கிளிக் செய்யவும்.
+						</div>
+
+						<div class="voice-controls">
+							<button class="control-btn" id="pauseVoiceBtn">⏸️ Pause</button>
+							<button class="control-btn" id="stopVoiceBtn">⏹️ Stop</button>
+							<button class="control-btn" id="repeatVoiceBtn">🔁 Repeat</button>
+						</div>
+
+						<div class="voice-settings">
+							<div>
+								🐢 <input type="range" id="voiceSpeedRange" min="0.5" max="1.5" step="0.1" value="0.85">
+								🐇
+								<span id="speedValue">0.85x</span>
+							</div>
+							<select id="voiceSelect">
+								<option value="">குரல் தேர்வு (ஏற்றுகிறது...)</option>
+							</select>
+						</div>
+
+						<div class="compatibility-notice" id="browserNotice">
+							Browser compatibility checking...
+						</div>
+					</div>
+
 					<div class="panel-title">Safety Notes</div>
 					<div class="result-card" style="grid-column: 1 / -1;">
 						<ul id="safetyNotes" style="margin: 0; padding-left: 18px; color: var(--muted);"></ul>
@@ -937,6 +1155,12 @@
 					<div class="panel-title">Reports</div>
 					<div class="button-row">
 						<button class="btn secondary" id="reportBtn" disabled>Download PDF Report</button>
+						<button class="btn btn-whatsapp" id="whatsappBtn" disabled>
+							<svg viewBox="0 0 24 24" width="16" height="16" style="fill: currentColor;">
+								<path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
+							</svg>
+							Share on WhatsApp
+						</button>
 					</div>
 					<div class="result-card">
 						<div class="hint" data-i18n="emailReportHint">Email the report to the client.</div>
@@ -970,9 +1194,7 @@
 		</div>
 	</div>
 
-	<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-		integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-	<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+	<script src="{{ url_for('static', filename='libs/chart.min.js') }}"></script>
 	<script>
 		const translations = {
 			en: {
@@ -1028,7 +1250,8 @@
 			buildingType: "House",
 			floors: 2,
 			marker: null,
-			chart: null
+			chart: null,
+			locationCache: {}
 		};
 
 		const latInput = document.getElementById("latInput");
@@ -1041,6 +1264,7 @@
 		const floorValue = document.getElementById("floorValue");
 		const statusLog = document.getElementById("statusLog");
 		const reportBtn = document.getElementById("reportBtn");
+		const whatsappBtn = document.getElementById("whatsappBtn");
 		const visualizeBtn = document.getElementById("visualizeBtn");
 		const emailReportBtn = document.getElementById("emailReportBtn");
 		const reportEmail = document.getElementById("reportEmail");
@@ -1294,9 +1518,68 @@
 			}
 		}
 
+		// ── BUTTON UX WRAPPER ──
+		/**
+		 * Wraps an async button action with loading, success, error, and timeout UX.
+		 * @param {HTMLButtonElement} buttonEl - The button triggering the action.
+		 * @param {Function} actionFn - The async function to execute.
+		 */
+		async function withButtonFeedback(buttonEl, actionFn) {
+			if (!buttonEl || buttonEl.disabled) return;
+			const originalText = buttonEl.textContent;
+			let timeoutTimer = null;
+
+			try {
+				// 1. Loading State
+				buttonEl.disabled = true;
+				buttonEl.classList.add("btn-loading");
+				buttonEl.textContent = "Processing...";
+
+				// Start 15s timeout warning
+				timeoutTimer = setTimeout(() => {
+					if (statusLog) {
+						statusLog.textContent = "Taking longer than usual... APIs may be slow. Please wait.";
+					}
+				}, 15000);
+
+				// Execute action
+				await actionFn();
+
+				// 2. Success State
+				clearTimeout(timeoutTimer);
+				buttonEl.classList.remove("btn-loading");
+				buttonEl.classList.add("btn-success");
+				buttonEl.textContent = "Success!";
+				
+				setTimeout(() => {
+					buttonEl.classList.remove("btn-success");
+					buttonEl.textContent = originalText;
+					buttonEl.disabled = false;
+				}, 2000);
+
+			} catch (err) {
+				// 3. Error State
+				clearTimeout(timeoutTimer);
+				buttonEl.classList.remove("btn-loading");
+				buttonEl.classList.add("btn-error");
+				buttonEl.textContent = "Failed";
+				
+				setTimeout(() => {
+					buttonEl.classList.remove("btn-error");
+					buttonEl.textContent = originalText;
+					buttonEl.disabled = false;
+				}, 2500);
+				
+				// Rethrow if needed by caller
+				throw err;
+			}
+		}
+
 		if (addressSearchBtn) {
-			addressSearchBtn.addEventListener("click", () => {
-				geocodeAddress(addressInput.value.trim());
+			addressSearchBtn.addEventListener("click", async () => {
+				await withButtonFeedback(addressSearchBtn, async () => {
+					await geocodeAddress(addressInput.value.trim());
+				});
 			});
 		}
 
@@ -1325,7 +1608,7 @@
 
 		document.getElementById("locateBtn").addEventListener("click", () => {
 			if (!navigator.geolocation) {
-				statusLog.textContent = "Geolocation not supported in this browser.";
+				statusLog.textContent = "Geolocation is not supported by your browser.";
 				return;
 			}
 			statusLog.textContent = "Requesting location access...";
@@ -1334,14 +1617,18 @@
 					const { latitude, longitude } = pos.coords;
 					map.setView([latitude, longitude], 12);
 					setMarker(latitude, longitude);
-					statusLog.textContent = "Location detected. Ready to analyze.";
+					statusLog.textContent = "✅ Location detected. Ready to analyze.";
 				},
 				(err) => {
 					let msg = "Unable to access location.";
-					if (err.code === 1) msg = "Location access denied by user. Please enable it in browser settings.";
-					else if (err.code === 2) msg = "Location unavailable. Please select manually.";
-					else if (err.code === 3) msg = "Location request timed out.";
-					statusLog.textContent = msg + " Please click on the map.";
+					if (err.code === 1) {
+						msg = "Location access denied. Please click the site icon in your address bar to reset permissions, or manually select a point on the map.";
+					} else if (err.code === 2) {
+						msg = "Location unavailable. Please try searching for an address instead.";
+					} else if (err.code === 3) {
+						msg = "Location request timed out.";
+					}
+					statusLog.textContent = msg;
 				},
 				{ timeout: 10000, enableHighAccuracy: false }
 			);
@@ -1597,6 +1884,204 @@
 			explanation.textContent = `Your Feasibility score (${feasibilityText}) measures overall site suitability across soil, climate, environment, and ecology. However, Lifespan prediction (${lifespanText}) depends heavily on soil bearing capacity and degradation risk. Your Soil Degradation is ${soilText} and bearing capacity is ${bearingText}, which can shorten structural lifespan even on an otherwise feasible site. ${foundationText}`;
 		}
 
+
+		// Tamil Voice Report Logic
+		let tamilSentences = [];
+		let currentSentenceIndex = 0;
+		let synth = window.speechSynthesis;
+		let utterance = null;
+		let isPaused = false;
+		let selectedVoice = null;
+
+		const voiceReportPanel = document.getElementById("voiceReportPanel");
+		const voiceReportBtn = document.getElementById("voiceReportBtn");
+		const scriptDisplay = document.getElementById("scriptDisplay");
+		const voiceProgress = document.getElementById("voiceProgress");
+		const voiceSelect = document.getElementById("voiceSelect");
+		const speedRange = document.getElementById("voiceSpeedRange");
+		const speedValue = document.getElementById("speedValue");
+		const browserNotice = document.getElementById("browserNotice");
+
+		// Initialize Web Speech API
+		function initVoiceEngine() {
+			if (!synth) {
+				browserNotice.innerHTML = "❌ Browser does not support speech synthesis.";
+				return;
+			}
+
+			const isChrome = /Chrome/.test(navigator.userAgent) && /Google Inc/.test(navigator.vendor);
+			if (isChrome) {
+				browserNotice.innerHTML = "✅ Full support (Chrome detected).";
+				browserNotice.style.color = "#059669";
+			} else {
+				browserNotice.innerHTML = "⚠️ Limited support (Recommend Chrome/Edge).";
+			}
+
+			const loadVoices = () => {
+				const voices = synth.getVoices();
+				voiceSelect.innerHTML = '<option value="">Default Voice</option>';
+
+				// Priority: ta-IN (Tamil), hi-IN (Hindi), others
+				const priorityVoices = voices.filter(v => v.lang.includes('ta') || v.lang.includes('hi') || v.lang.includes('IN'));
+
+				priorityVoices.forEach(v => {
+					const opt = document.createElement("option");
+					opt.value = v.name;
+					opt.textContent = `${v.name} (${v.lang})`;
+					voiceSelect.appendChild(opt);
+					if (v.lang === 'ta-IN' && !selectedVoice) {
+						selectedVoice = v;
+						opt.selected = true;
+					}
+				});
+
+				if (!selectedVoice && priorityVoices.length > 0) {
+					selectedVoice = priorityVoices[0];
+				}
+			};
+
+			loadVoices();
+			if (speechSynthesis.onvoiceschanged !== undefined) {
+				speechSynthesis.onvoiceschanged = loadVoices;
+			}
+		}
+
+		async function startVoiceReport() {
+			if (synth.speaking && !isPaused) {
+				stopVoice();
+				return;
+			}
+			if (isPaused) {
+				resumeVoice();
+				return;
+			}
+
+			if (!lastPayload || !lastPayload.result) {
+				console.error("No analysis results available for voice report.");
+				return;
+			}
+
+			const resultData = lastPayload.result;
+			console.log('Sending to voice-report:', resultData);
+
+			try {
+				voiceReportBtn.textContent = "⏳";
+				const response = await fetch("/api/voice-report", {
+					method: "POST",
+					headers: authHeaders(),
+					body: JSON.stringify({ result: resultData })
+				});
+
+				console.log('Voice report status:', response.status);
+				const data = await response.json();
+				console.log('Voice report data:', data);
+
+				if (!response.ok || data.error) {
+					throw new Error(data.error || 'Server error');
+				}
+
+				// Split by common Tamil sentence enders (., !, ?)
+				tamilSentences = data.script.split(/[.!?]|வாழ்த்துக்கள்!/).map(s => s.trim()).filter(s => s.length > 0);
+				currentSentenceIndex = 0;
+				speakNextSentence();
+			} catch (err) {
+				console.error("Voice report error:", err);
+				scriptDisplay.textContent = "குரல் அறிக்கையைப் பெறுவதில் பிழை ஏற்பட்டது: " + err.message;
+				voiceReportBtn.textContent = "🔊";
+			}
+		}
+
+		function speakNextSentence() {
+			if (currentSentenceIndex >= tamilSentences.length) {
+				stopVoice();
+				return;
+			}
+
+			const text = tamilSentences[currentSentenceIndex];
+			utterance = new SpeechSynthesisUtterance(text);
+
+			// Setup voice properties
+			const voices = synth.getVoices();
+			const customVoice = voices.find(v => v.name === voiceSelect.value);
+			utterance.voice = customVoice || selectedVoice;
+			utterance.lang = utterance.voice ? utterance.voice.lang : 'ta-IN';
+			utterance.rate = parseFloat(speedRange.value);
+			utterance.pitch = 1.0;
+			utterance.volume = 1.0;
+
+			// UI Updates
+			voiceReportBtn.textContent = "⏹️";
+			voiceReportBtn.classList.add("speaking");
+			voiceReportBtn.title = "நிறுத்த கிளிக் செய்யுங்கள்";
+			voiceProgress.textContent = `வாக்கியம் ${currentSentenceIndex + 1}/${tamilSentences.length}`;
+
+			// Highlight sentence
+			scriptDisplay.innerHTML = tamilSentences.map((s, i) =>
+				`<span class="${i === currentSentenceIndex ? 'current-sentence' : ''}">${s}. </span>`
+			).join("");
+
+			// Scroll to highlighted
+			const currentEl = scriptDisplay.querySelector(".current-sentence");
+			if (currentEl) currentEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+			utterance.onend = () => {
+				if (!isPaused && currentSentenceIndex < tamilSentences.length) {
+					currentSentenceIndex++;
+					speakNextSentence();
+				}
+			};
+
+			utterance.onerror = () => stopVoice();
+
+			synth.speak(utterance);
+		}
+
+		function pauseVoice() {
+			if (synth.speaking && !isPaused) {
+				synth.pause();
+				isPaused = true;
+				voiceReportBtn.textContent = "▶️";
+				voiceReportBtn.title = "தொடர கிளிக் செய்யுங்கள்";
+			}
+		}
+
+		function resumeVoice() {
+			if (isPaused) {
+				synth.resume();
+				isPaused = false;
+				voiceReportBtn.textContent = "⏹️";
+				voiceReportBtn.title = "நிறுத்த கிளிக் செய்யுங்கள்";
+			}
+		}
+
+		function stopVoice() {
+			synth.cancel();
+			tamilSentences = [];
+			currentSentenceIndex = 0;
+			isPaused = false;
+			voiceReportBtn.textContent = "🔊";
+			voiceReportBtn.classList.remove("speaking");
+			voiceReportBtn.title = "தமிழில் கேளுங்கள்";
+			voiceProgress.textContent = "வாக்கியம் --/--";
+			scriptDisplay.textContent = "அறிக்கை நிறுத்தப்பட்டது.";
+		}
+
+		function repeatVoice() {
+			stopVoice();
+			setTimeout(startVoiceReport, 100);
+		}
+
+		// Event Listeners
+		voiceReportBtn.addEventListener("click", startVoiceReport);
+		pauseVoiceBtn.addEventListener("click", () => isPaused ? resumeVoice() : pauseVoice());
+		stopVoiceBtn.addEventListener("click", stopVoice);
+		repeatVoiceBtn.addEventListener("click", repeatVoice);
+		speedRange.addEventListener("input", (e) => {
+			speedValue.textContent = e.target.value + "x";
+		});
+
+		initVoiceEngine();
+
 		function updateResults(result) {
 			const fallback = "--";
 			const summaryBanner = document.getElementById("summaryBanner");
@@ -1606,6 +2091,8 @@
 			const verdictTitle = document.getElementById("verdictTitle");
 			const verdictBody = document.getElementById("verdictBody");
 			const lifespanWarning = document.getElementById("lifespanWarning");
+			const locationCard = document.getElementById("locationNameCard");
+			const locationDisplay = document.getElementById("locationNameDisplay");
 			document.getElementById("feasibility").textContent = result ? `${result.feasibility_score}%` : fallback;
 			document.getElementById("risk").textContent = result ? result.risk_level : fallback;
 			document.getElementById("lifespan").textContent = result ? result.lifespan : fallback;
@@ -1633,6 +2120,14 @@
 			document.getElementById("historicalMatch").textContent = result && result.historical_match_km !== null
 				? `${result.historical_match_km} km`
 				: "No match";
+
+			if (result) {
+				voiceReportPanel.style.display = "flex";
+				scriptDisplay.textContent = "அறிக்கை தயார். கேட்க '🔊' அழுத்தவும்.";
+			} else {
+				voiceReportPanel.style.display = "none";
+				stopVoice();
+			}
 
 			const feasibility = result ? Number(result.feasibility_score) : null;
 			const confidence = result ? Number(result.confidence) : null;
@@ -1788,29 +2283,34 @@
 			if (!result) {
 				reportBtn.disabled = true;
 				releaseStatus.textContent = "Pending review";
+				if (locationCard) locationCard.style.display = "none";
+				if (whatsappBtn) whatsappBtn.disabled = true;
+			} else {
+				if (whatsappBtn) whatsappBtn.disabled = false;
 			}
 		}
 
-		document.getElementById("analyzeBtn").addEventListener("click", async () => {
-			if (!requireLogin()) {
-				return;
-			}
-			if (state.lat === null || state.lon === null) {
-				statusLog.textContent = "Pick a location on the map first.";
-				return;
-			}
+	document.getElementById("analyzeBtn").addEventListener("click", async () => {
+			await withButtonFeedback(document.getElementById("analyzeBtn"), async () => {
+				if (!requireLogin()) {
+					throw new Error("Not logged in");
+				}
+				if (state.lat === null || state.lon === null) {
+					statusLog.textContent = "Pick a location on the map first.";
+					throw new Error("No location selected");
+				}
 
-			const sensorData = {};
-			if (sensorSoilMoisture.value) sensorData.soil_moisture_percent = Number(sensorSoilMoisture.value);
-			if (sensorGroundwater.value) sensorData.groundwater_depth = Number(sensorGroundwater.value);
-			if (sensorRainfall.value) sensorData.local_rainfall_mm = Number(sensorRainfall.value);
-			if (sensorWind.value) sensorData.local_wind_speed_ms = Number(sensorWind.value);
-			if (Object.keys(sensorData).length) {
-				sensorData.sensor_timestamp = new Date().toISOString();
-			}
+				const sensorData = {};
+				if (sensorSoilMoisture.value) sensorData.soil_moisture_percent = Number(sensorSoilMoisture.value);
+				if (sensorGroundwater.value) sensorData.groundwater_depth = Number(sensorGroundwater.value);
+				if (sensorRainfall.value) sensorData.local_rainfall_mm = Number(sensorRainfall.value);
+				if (sensorWind.value) sensorData.local_wind_speed_ms = Number(sensorWind.value);
+				if (Object.keys(sensorData).length) {
+					sensorData.sensor_timestamp = new Date().toISOString();
+				}
 
-			statusLog.textContent = "Collecting live data, running models...";
-			try {
+				statusLog.textContent = "Collecting live data, running models...";
+				
 				const res = await fetch("/api/analyze", {
 					method: "POST",
 					headers: authHeaders(),
@@ -1826,7 +2326,7 @@
 				const payload = await res.json();
 				if (!res.ok || payload.error) {
 					statusLog.textContent = payload.error || "Analysis failed.";
-					return;
+					throw new Error(payload.error || "Analysis failed.");
 				}
 				lastPayload = {
 					inputs: {
@@ -1837,59 +2337,107 @@
 					},
 					result: payload.result
 				};
+
+				// REVERSE GEOCODING
+				const locKey = `${state.lat.toFixed(5)},${state.lon.toFixed(5)}`;
+				const locationCard = document.getElementById("locationNameCard");
+				const locationDisplay = document.getElementById("locationNameDisplay");
+				
+				if (state.locationCache[locKey]) {
+					payload.result.location_name = state.locationCache[locKey];
+					if (locationDisplay) locationDisplay.textContent = "📍 " + payload.result.location_name;
+					if (locationCard) locationCard.style.display = "block";
+				} else {
+					if (locationDisplay) locationDisplay.textContent = `📍 ${state.lat.toFixed(4)}, ${state.lon.toFixed(4)} (Fetching...)`;
+					if (locationCard) locationCard.style.display = "block";
+					
+					try {
+						const nomRes = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${state.lat}&lon=${state.lon}&format=json`);
+						const nomData = await nomRes.json();
+						if (nomData && nomData.display_name) {
+							payload.result.location_name = nomData.display_name;
+							state.locationCache[locKey] = nomData.display_name;
+							if (locationDisplay) locationDisplay.textContent = "📍 " + nomData.display_name;
+						} else {
+							if (locationDisplay) locationDisplay.textContent = `📍 ${state.lat.toFixed(4)}, ${state.lon.toFixed(4)}`;
+						}
+					} catch (err) {
+						if (locationDisplay) locationDisplay.textContent = `📍 ${state.lat.toFixed(4)}, ${state.lon.toFixed(4)}`;
+						console.error("Reverse geocoding failed:", err);
+					}
+				}
+
 				updateResults(payload.result);
 				statusLog.textContent = "Analysis complete. Review the dashboard metrics.";
 				setActiveTab("analysis");
 				visualizeBtn.disabled = false;
-			} catch (err) {
-				statusLog.textContent = "Network error. Please try again.";
-			}
+			});
 		});
 
-		visualizeBtn.addEventListener("click", () => {
-			if (!lastPayload) {
-				statusLog.textContent = "Run analysis before viewing visualization.";
-				return;
-			}
-			statusLog.textContent = "Generating 3D Simulation... This may take 10-15 seconds.";
+		visualizeBtn.addEventListener("click", async () => {
+			await withButtonFeedback(visualizeBtn, async () => {
+				if (!lastPayload) {
+					statusLog.textContent = "Run analysis before viewing visualization.";
+					throw new Error("No payload");
+				}
+				statusLog.textContent = "Generating 3D Simulation... This may take 10-15 seconds.";
 
-			const form = document.createElement("form");
-			form.method = "POST";
-			form.action = "/visualization";
+				// Artificial delay to simulate feedback before navigation away
+				await new Promise((resolve) => setTimeout(resolve, 800));
 
-			const fields = {
-				lat: lastPayload.inputs.lat,
-				lon: lastPayload.inputs.lon,
-				building_type: lastPayload.inputs.building_type,
-				floors: lastPayload.inputs.floors
-			};
+				const form = document.createElement("form");
+				form.method = "POST";
+				form.action = "/visualization";
 
-			for (const key in fields) {
-				const input = document.createElement("input");
-				input.type = "hidden";
-				input.name = key;
-				input.value = fields[key];
-				form.appendChild(input);
-			}
+				const fields = {
+					lat: lastPayload.inputs.lat,
+					lon: lastPayload.inputs.lon,
+					building_type: lastPayload.inputs.building_type,
+					floors: lastPayload.inputs.floors
+				};
 
-			document.body.appendChild(form);
-			form.submit();
+				for (const key in fields) {
+					const input = document.createElement("input");
+					input.type = "hidden";
+					input.name = key;
+					input.value = fields[key];
+					form.appendChild(input);
+				}
+
+				document.body.appendChild(form);
+				form.submit();
+			});
 		});
+
+		if (whatsappBtn) {
+			whatsappBtn.addEventListener("click", () => {
+				if (!lastPayload || !lastPayload.result) return;
+				
+				const res = lastPayload.result;
+				const locName = res.location_name || `${state.lat.toFixed(4)}, ${state.lon.toFixed(4)}`;
+				
+				const msg = `🏗️ AI Construction Site Analysis Report\n\n📍 Location: ${locName}\n⭐ Feasibility: ${res.feasibility_score}%\n🏛️ Foundation: ${res.foundation || 'Standard'}\n⏱️ Lifespan: ${res.lifespan || '--'} years\n🎯 Risk Level: ${res.risk_level || '--'}\n\nAnalyzed using AI Construction Site Selection System.\n#Construction #AI #SiteSelection`;
+
+				const encodedMsg = encodeURIComponent(msg);
+				window.open(`https://wa.me/?text=${encodedMsg}`, '_blank');
+			});
+		}
 
 		reportBtn.addEventListener("click", async () => {
-			if (!requireLogin()) {
-				return;
-			}
-			if (!lastPayload) {
-				statusLog.textContent = "Run analysis before downloading report.";
-				return;
-			}
-			if (!lastReview || !checklistComplete()) {
-				statusLog.textContent = "Complete engineer review and checklist before downloading report.";
-				return;
-			}
-			statusLog.textContent = "Generating PDF report...";
-			try {
+			await withButtonFeedback(reportBtn, async () => {
+				if (!requireLogin()) {
+					throw new Error("Not logged in");
+				}
+				if (!lastPayload) {
+					statusLog.textContent = "Run analysis before downloading report.";
+					throw new Error("No payload");
+				}
+				if (!lastReview || !checklistComplete()) {
+					statusLog.textContent = "Complete engineer review and checklist before downloading report.";
+					throw new Error("Incomplete review");
+				}
+				statusLog.textContent = "Generating PDF report...";
+				
 				const payload = { ...lastPayload };
 				if (lastReview) {
 					payload.review = lastReview;
@@ -1902,7 +2450,7 @@
 				if (!res.ok) {
 					const err = await res.json();
 					statusLog.textContent = err.error || "Failed to generate report.";
-					return;
+					throw new Error(err.error || "Failed to generate report.");
 				}
 				const blob = await res.blob();
 				const url = window.URL.createObjectURL(blob);
@@ -1914,44 +2462,43 @@
 				a.remove();
 				setTimeout(() => window.URL.revokeObjectURL(url), 1500);
 				statusLog.textContent = "Report downloaded successfully.";
-			} catch (err) {
-				statusLog.textContent = "Report generation failed.";
-			}
+			});
 		});
 
 		submitReviewBtn.addEventListener("click", async () => {
-			if (!requireLogin()) {
-				return;
-			}
-			if (!lastPayload) {
-				statusLog.textContent = "Run analysis before submitting review.";
-				return;
-			}
-			if (!reviewerName.value.trim() || !licenseId.value.trim() || !reviewDate.value) {
-				statusLog.textContent = "Reviewer name, license ID, and date are required.";
-				return;
-			}
-			lastReview = {
-				reviewer_name: reviewerName.value.trim(),
-				license_id: licenseId.value.trim(),
-				decision: reviewDecision.value,
-				review_date: reviewDate.value,
-				notes: reviewNotes.value.trim(),
-				checklist: {
-					soil_bearing_test: document.getElementById("chk-soil").checked,
-					groundwater_survey: document.getElementById("chk-water").checked,
-					seismic_check: document.getElementById("chk-seismic").checked,
-					flood_history: document.getElementById("chk-flood").checked,
-					environment_clearance: document.getElementById("chk-env").checked,
-					model_verified: document.getElementById("chk-verify").checked,
-					data_freshness: document.getElementById("chk-fresh").checked,
-					field_tests: document.getElementById("chk-field").checked,
-					maps_verified: document.getElementById("chk-cross").checked,
-					license_verified: document.getElementById("chk-license").checked
+			await withButtonFeedback(submitReviewBtn, async () => {
+				if (!requireLogin()) {
+					throw new Error("Not logged in");
 				}
-			};
-			statusLog.textContent = "Submitting engineer review...";
-			try {
+				if (!lastPayload) {
+					statusLog.textContent = "Run analysis before submitting review.";
+					throw new Error("No payload");
+				}
+				if (!reviewerName.value.trim() || !licenseId.value.trim() || !reviewDate.value) {
+					statusLog.textContent = "Reviewer name, license ID, and date are required.";
+					throw new Error("Missing review fields");
+				}
+				lastReview = {
+					reviewer_name: reviewerName.value.trim(),
+					license_id: licenseId.value.trim(),
+					decision: reviewDecision.value,
+					review_date: reviewDate.value,
+					notes: reviewNotes.value.trim(),
+					checklist: {
+						soil_bearing_test: document.getElementById("chk-soil").checked,
+						groundwater_survey: document.getElementById("chk-water").checked,
+						seismic_check: document.getElementById("chk-seismic").checked,
+						flood_history: document.getElementById("chk-flood").checked,
+						environment_clearance: document.getElementById("chk-env").checked,
+						model_verified: document.getElementById("chk-verify").checked,
+						data_freshness: document.getElementById("chk-fresh").checked,
+						field_tests: document.getElementById("chk-field").checked,
+						maps_verified: document.getElementById("chk-cross").checked,
+						license_verified: document.getElementById("chk-license").checked
+					}
+				};
+				statusLog.textContent = "Submitting engineer review...";
+				
 				const res = await fetch("/api/review", {
 					method: "POST",
 					headers: authHeaders(),
@@ -1963,13 +2510,11 @@
 				const payload = await res.json();
 				if (!res.ok || payload.error) {
 					statusLog.textContent = payload.error || "Review submission failed.";
-					return;
+					throw new Error(payload.error || "Review submission failed.");
 				}
 				statusLog.textContent = "Engineer review saved.";
 				updateReleaseStatus();
-			} catch (err) {
-				statusLog.textContent = "Review submission failed.";
-			}
+			});
 		});
 
 		checklistInputs.forEach((input) => {
@@ -1998,17 +2543,18 @@
 		}
 
 		uploadDatasetBtn.addEventListener("click", async () => {
-			if (!requireLogin()) {
-				return;
-			}
-			if (!datasetFile.files.length) {
-				statusLog.textContent = "Choose a CSV file to upload.";
-				return;
-			}
-			statusLog.textContent = "Uploading historical dataset...";
-			const formData = new FormData();
-			formData.append("file", datasetFile.files[0]);
-			try {
+			await withButtonFeedback(uploadDatasetBtn, async () => {
+				if (!requireLogin()) {
+					throw new Error("Not logged in");
+				}
+				if (!datasetFile.files.length) {
+					statusLog.textContent = "Choose a CSV file to upload.";
+					throw new Error("No file chosen");
+				}
+				statusLog.textContent = "Uploading historical dataset...";
+				const formData = new FormData();
+				formData.append("file", datasetFile.files[0]);
+				
 				const res = await fetch("/api/datasets/upload", {
 					method: "POST",
 					headers: authToken ? { Authorization: `Bearer ${authToken}` } : {},
@@ -2019,38 +2565,37 @@
 				}
 				updateReleaseStatus();
 				if (!requireLogin()) {
-					return;
+					throw new Error("Not logged in");
 				}
 				const data = await res.json();
 				if (!res.ok || data.error) {
 					statusLog.textContent = data.error || "Upload failed.";
-					return;
+					throw new Error(data.error || "Upload failed.");
 				}
 				statusLog.textContent = "Dataset uploaded.";
 				refreshDatasetStatus();
-			} catch (err) {
-				statusLog.textContent = "Upload failed.";
-			}
+			});
 		});
 
 		emailReportBtn.addEventListener("click", async () => {
-			if (!requireLogin()) {
-				return;
-			}
-			if (!lastPayload) {
-				statusLog.textContent = "Run analysis before emailing report.";
-				return;
-			}
-			if (!lastReview || !checklistComplete()) {
-				statusLog.textContent = "Complete engineer review and checklist before emailing report.";
-				return;
-			}
-			if (!reportEmail.value.trim()) {
-				statusLog.textContent = "Enter a recipient email.";
-				return;
-			}
-			statusLog.textContent = "Emailing report...";
-			try {
+			await withButtonFeedback(emailReportBtn, async () => {
+				if (!requireLogin()) {
+					throw new Error("Not logged in");
+				}
+				if (!lastPayload) {
+					statusLog.textContent = "Run analysis before emailing report.";
+					throw new Error("No payload");
+				}
+				if (!lastReview || !checklistComplete()) {
+					statusLog.textContent = "Complete engineer review and checklist before emailing report.";
+					throw new Error("Incomplete review");
+				}
+				if (!reportEmail.value.trim()) {
+					statusLog.textContent = "Enter a recipient email.";
+					throw new Error("No email provided");
+				}
+				statusLog.textContent = "Emailing report...";
+				
 				const res = await fetch("/api/report/email", {
 					method: "POST",
 					headers: authHeaders(),
@@ -2063,14 +2608,10 @@
 				const data = await res.json();
 				if (!res.ok || data.error) {
 					statusLog.textContent = data.error || "Email failed.";
-					alert(data.error || "Email failed.");
-					return;
+					throw new Error(data.error || "Email failed.");
 				}
 				statusLog.textContent = "Email sent successfully.";
-				alert("Email sent successfully!");
-			} catch (err) {
-				statusLog.textContent = "Email failed.";
-			}
+			});
 		});
 
 		refreshDatasetStatus();

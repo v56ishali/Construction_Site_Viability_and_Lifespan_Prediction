@@ -1,26 +1,26 @@
 # app.py — Flask Backend
 
 import os
-from dotenv import load_dotenv
+from dotenv import load_dotenv # pyre-ignore
 load_dotenv()
-from flask import Flask, request, jsonify, render_template, send_file
-from flask_cors import CORS
-from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
-from flask_sqlalchemy import SQLAlchemy
-from flask_limiter import Limiter
-from flask_limiter.util import get_remote_address
-from flask_mail import Mail, Message
-from predictor import predict_location, HIST_DATA_PATH, get_hist_path
+from flask import Flask, request, jsonify, render_template, send_file # pyre-ignore
+from flask_cors import CORS # pyre-ignore
+from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity # pyre-ignore
+from flask_sqlalchemy import SQLAlchemy # pyre-ignore
+from flask_limiter import Limiter # pyre-ignore
+from flask_limiter.util import get_remote_address # pyre-ignore
+from flask_mail import Mail, Message # pyre-ignore
+from predictor import predict_location, HIST_DATA_PATH, get_hist_path # pyre-ignore
 from io import BytesIO
 from datetime import datetime
 import json
 import os
-import pandas as pd
-from werkzeug.utils import secure_filename
-from werkzeug.security import generate_password_hash, check_password_hash
-from reportlab.pdfgen import canvas
-from reportlab.lib.pagesizes import A4
-import requests
+import pandas as pd # pyre-ignore
+from werkzeug.utils import secure_filename # pyre-ignore
+from werkzeug.security import generate_password_hash, check_password_hash # pyre-ignore
+from reportlab.pdfgen import canvas # pyre-ignore
+from reportlab.lib.pagesizes import A4 # pyre-ignore
+import requests # pyre-ignore
 
 def get_scenario_filename(result):
     """Maps the analysis result to one of 10 pre-rendered Image Scenarios"""
@@ -112,6 +112,9 @@ class User(db.Model):
     email = db.Column(db.String(255), unique=True, nullable=False)
     password_hash = db.Column(db.String(255), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def __init__(self, **kwargs):
+        super(User, self).__init__(**kwargs)
 
 
 with app.app_context():
@@ -234,6 +237,281 @@ def analyze():
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+@app.route("/api/voice-report", methods=["POST"])
+@limiter.limit("20 per minute")
+@_maybe_jwt_required
+def voice_report():
+    try:
+        data = request.get_json()
+        print("DEBUG voice-report received:", data)
+        if not data:
+            return jsonify({"error": "No data received"}), 400
+        
+        result = data.get("result", {})
+        if not result:
+            # Fallback to checking if results were sent directly
+            result = data
+            
+        script = _generate_tamil_script(result)
+        print("DEBUG script generated:", str(script)[:100] + "...") # pyre-ignore
+        return jsonify({"success": True, "script": script})
+    except Exception as e:
+        print("ERROR in voice-report:", str(e))
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+
+def _generate_tamil_script(result):
+    def safe_float(val, default=0.0):
+        if val is None: return default
+        if isinstance(val, (int, float)): return float(val)
+        try:
+            import re
+            # Find the first sequence that looks like a number
+            match = re.search(r"[-+]?\d*\.\d+|\d+", str(val).replace('–', '-'))
+            return float(match.group()) if match else default
+        except:
+            return default
+
+    # ── SAFE VALUE EXTRACTION ──
+    score = safe_float(result.get('final_feasibility_score') 
+               or result.get('feasibility_score') 
+               or result.get('score'), 50.0)
+    
+    # Handle lifespan ranges like '10–23 years'
+    lifespan_val = result.get('predicted_lifespan') or result.get('lifespan')
+    lifespan_min = safe_float(result.get('lifespan_min'))
+    lifespan_max = safe_float(result.get('lifespan_max'))
+    
+    if not lifespan_min or not lifespan_max:
+        import re
+        nums = re.findall(r"\d+", str(lifespan_val or "60").replace('–', '-'))
+        if len(nums) >= 2:
+            lifespan_min = float(nums[0])
+            lifespan_max = float(nums[1])
+        elif len(nums) == 1:
+            val = float(nums[0])
+            lifespan_min = max(0.0, val - 15.0)
+            lifespan_max = val + 15.0
+        else:
+            lifespan_min, lifespan_max = 50.0, 75.0
+    
+    bearing = safe_float(result.get('bearing_capacity_kNm2') 
+               or result.get('bearing_capacity'), 100.0)
+    
+    foundation = str(
+        result.get('foundation_recommendation') 
+        or result.get('foundation') 
+        or 'Isolated Footing')
+    
+    flood = str(result.get('flood_risk') or 'Low')
+    earthquake = str(result.get('earthquake_risk') or 'Low')
+    cyclone = str(result.get('cyclone_risk') or 'None')
+    elephant = str(result.get('elephant_corridor_risk') or 'Low')
+    pa_risk = str(result.get('protected_area_risk') or 'Low')
+    
+    lat = safe_float(
+        result.get('latitude') 
+        or result.get('lat')
+        or result.get('input_lat')
+        or result.get('query_lat'), 0.0)
+
+    lon = safe_float(
+        result.get('longitude')
+        or result.get('lon') 
+        or result.get('input_lon')
+        or result.get('query_lon'), 0.0)
+    
+    location_name = result.get('location_name')
+    
+    confidence = safe_float(result.get('confidence_percent') or result.get('confidence'), 75.0)
+    
+    # ── FEASIBILITY TEXT ──
+    if score >= 75:
+        feasibility_text = (
+            f"இந்த இடத்தின் சாத்தியக்கூறு "
+            f"மதிப்பெண் {score:.1f} சதவீதம். "
+            f"இது நல்ல மதிப்பெண். "
+            f"இங்கே கட்டுமானம் மேற்கொள்ளலாம்.")
+    elif score >= 50:
+        feasibility_text = (
+            f"இந்த இடத்தின் சாத்தியக்கூறு "
+            f"மதிப்பெண் {score:.1f} சதவீதம். "
+            f"இது நடுத்தர மதிப்பெண். "
+            f"கவனமாக திட்டமிட்டு கட்டலாம்.")
+    else:
+        feasibility_text = (
+            f"இந்த இடத்தின் சாத்தியக்கூறு "
+            f"மதிப்பெண் {score:.1f} சதவீதம். "
+            f"இது குறைவான மதிப்பெண். "
+            f"இங்கே கட்டுமானம் தவிர்க்க "
+            f"பரிந்துரைக்கிறோம்.")
+    
+    # ── LIFESPAN TEXT ──
+    if lifespan_max >= 80:
+        lifespan_text = (
+            f"இந்த கட்டிடம் சுமார் "
+            f"{lifespan_min:.0f} முதல் "
+            f"{lifespan_max:.0f} ஆண்டுகள் வரை "
+            f"நீடிக்கும். இது மிகவும் நல்ல "
+            f"ஆயுட்காலம்.")
+    elif lifespan_max >= 50:
+        lifespan_text = (
+            f"இந்த கட்டிடம் சுமார் "
+            f"{lifespan_min:.0f} முதல் "
+            f"{lifespan_max:.0f} ஆண்டுகள் வரை "
+            f"நீடிக்கும். சராசரி ஆயுட்காலம்.")
+    else:
+        lifespan_text = (
+            f"இந்த கட்டிடம் சுமார் "
+            f"{lifespan_min:.0f} முதல் "
+            f"{lifespan_max:.0f} ஆண்டுகள் மட்டுமே "
+            f"நீடிக்கும். இது மிகவும் குறைவு. "
+            f"ஆழமான அடித்தளம் அவசியம்.")
+    
+    # ── BEARING CAPACITY TEXT ──
+    if bearing >= 150:
+        soil_text = (
+            f"மண்ணின் சுமை தாங்கும் திறன் "
+            f"{bearing:.0f} கிலோ நியூட்டன் "
+            f"சதுர மீட்டர். இது சிறந்த மண் தரம். "
+            f"எந்த வகை கட்டிடமும் கட்டலாம்.")
+    elif bearing >= 60:
+        soil_text = (
+            f"மண்ணின் சுமை தாங்கும் திறன் "
+            f"{bearing:.0f} கிலோ நியூட்டன் "
+            f"சதுர மீட்டர். சராசரி மண் தரம். "
+            f"சரியான அடித்தளத்துடன் கட்டலாம்.")
+    else:
+        soil_text = (
+            f"மண்ணின் சுமை தாங்கும் திறன் "
+            f"{bearing:.0f} கிலோ நியூட்டன் "
+            f"சதுர மீட்டர். இது பலவீனமான மண். "
+            f"ஆழமான பைல் அடித்தளம் தேவை.")
+    
+    # ── FOUNDATION TEXT ──
+    foundation_map = {
+        'Pile Foundation': 
+            'பைல் அடித்தளம். மண்ணின் கீழே '
+            'உள்ள பாறை வரை ஆழமாக போக வேண்டும்.',
+        'Pile Foundation (Deep)': 
+            'ஆழமான பைல் அடித்தளம். '
+            'பாறை அடுக்கு வரை தோண்ட வேண்டும்.',
+        'Raft Foundation': 
+            'ராஃப்ட் அடித்தளம். '
+            'பரந்த தட்டு போன்ற அடித்தளம்.',
+        'Isolated Footing with RCC': 
+            'RCC தனி அடித்தளம். '
+            'கனமான கட்டிடங்களுக்கு ஏற்றது.',
+        'Isolated Footing': 
+            'தனி அடித்தளம். '
+            'சாதாரண வீடுகளுக்கு ஏற்றது.',
+        'Simple Strip Footing': 
+            'நேர் கோடு அடித்தளம். '
+            'நல்ல மண்ணில் எளிய வீடுகளுக்கு.',
+    }
+    foundation_tamil = foundation_map.get(
+        foundation, 
+        f'{foundation} வகை அடித்தளம்.')
+    
+    # ── RISK TEXTS ──
+    risk_texts = []
+    
+    if flood.lower() == 'high':
+        risk_texts.append(
+            "வெள்ள அபாயம் அதிகமாக உள்ளது. "
+            "தரை மட்டத்திலிருந்து குறைந்தது "
+            "600 மிமீ உயரத்தில் கட்டவும்.")
+    elif flood.lower() == 'medium':
+        risk_texts.append(
+            "மிதமான வெள்ள அபாயம் உள்ளது. "
+            "வடிகால் ஏற்பாடு செய்யவும்.") # Fixed Korean typo "배수" to Tamil "வடிகால்"
+    
+    if earthquake.lower() == 'high':
+        risk_texts.append(
+            "நிலநடுக்க அபாயம் அதிகமாக உள்ளது. "
+            "IS 1893 தரநிலைப்படி கட்ட வேண்டும்.")
+    elif earthquake.lower() == 'medium':
+        risk_texts.append(
+            "நிலநடுக்க அபாயம் உள்ளது. "
+            "பலப்படுத்தப்பட்ட கட்டமைப்பு தேவை.")
+    
+    if cyclone.lower() not in ['none','low','no']:
+        risk_texts.append(
+            "புயல் அபாயம் உள்ளது. "
+            "கூரை மிகவும் வலுவாக இருக்க வேண்டும்.")
+    
+    if elephant.lower() == 'high':
+        risk_texts.append(
+            "எச்சரிக்கை! இந்த இடம் யானை "
+            "நடைபாதையில் உள்ளது. "
+            "வனத்துறை அனுமதி அவசியம்.")
+    
+    if pa_risk.lower() == 'high':
+        risk_texts.append(
+            "இந்த இடம் பாதுகாக்கப்பட்ட "
+            "காடுகளுக்கு அருகில் உள்ளது. "
+            "சட்டரீதியான அனுமதி பெறவும்.")
+    
+    if not risk_texts:
+        risk_texts.append(
+            "பெரிய இயற்கை அபாயங்கள் எதுவும் "
+            "கண்டறியப்படவில்லை.")
+    
+    risks_combined = " ".join(risk_texts)
+    
+    # ── VERDICT ──
+    if score >= 75 and lifespan_max >= 60:
+        verdict = (
+            "மொத்தத்தில், இந்த இடம் "
+            "கட்டுமானத்திற்கு தகுதியானது. "
+            "நல்ல திட்டமிடலுடன் கட்டுமானத்தை "
+            "தொடங்கலாம். உங்கள் கட்டுமான பணி "
+            "வெற்றிகரமாக அமைய வாழ்த்துக்கள்!")
+    else:
+        verdict = (
+            "மொத்தத்தில், இந்த இடத்தில் சில "
+            "கவலைகள் உள்ளன. தகுதிவாய்ந்த "
+            "சிவில் இன்ஜினியரை அணுகி "
+            "மேலும் ஆலோசனை பெறவும்.")
+    
+    location_text = ""
+    if location_name:
+        location_text = f"நீங்கள் பகுப்பாய்வு செய்த இடம், {location_name} பகுதியில் அமைந்துள்ளது. "
+    elif not (lat == 0 and lon == 0):
+        # Force float to satisfy strict linters before using abs()
+        f_lat = float(lat)
+        f_lon = float(lon)
+        location_text = (
+            f"நீங்கள் பகுப்பாய்வு செய்த இடம், "
+            f"{abs(f_lat):.2f} டிகிரி "
+            f"{'வடக்கு' if f_lat >= 0 else 'தெற்கு'} "
+            f"மற்றும் {abs(f_lon):.2f} டிகிரி "
+            f"{'கிழக்கு' if f_lon >= 0 else 'மேற்கு'} "
+            f"ஆயத்தொலைவில் அமைந்துள்ளது. ")
+
+    # ── ASSEMBLE FULL SCRIPT ──
+    script = (
+        f"வணக்கம்! நான் கட்டுமான தள AI "
+        f"உதவியாளர். "
+        f"நீங்கள் தேர்வு செய்த இடத்தின் "
+        f"முழு அறிக்கையை இப்போது கேட்கலாம். "
+        f"{location_text}"
+        f"{feasibility_text} "
+        f"{lifespan_text} "
+        f"{soil_text} "
+        f"பரிந்துரைக்கப்படும் அடித்தளம்: "
+        f"{foundation_tamil} "
+        f"{risks_combined} "
+        f"{verdict} "
+        f"இது AI அடிப்படையிலான மதிப்பீடு "
+        f"மட்டுமே. இறுதி முடிவிற்கு "
+        f"அங்கீகரிக்கப்பட்ட சிவில் "
+        f"இன்ஜினியரின் ஆலோசனை அவசியம். "
+        f"நன்றி!")
+    
+    return script
 
 @app.route("/api/report", methods=["POST"])
 @limiter.limit("10 per minute")
@@ -362,7 +640,11 @@ def register():
             return jsonify({"error": "Missing email or password"}), 400
         if User.query.filter_by(email=email).first():
             return jsonify({"error": "User already exists"}), 400
-        user = User(email=email, password_hash=generate_password_hash(password))
+        
+        user = User()
+        user.email = email
+        user.password_hash = generate_password_hash(password)
+        
         db.session.add(user)
         db.session.commit()
         return jsonify({"success": True})
