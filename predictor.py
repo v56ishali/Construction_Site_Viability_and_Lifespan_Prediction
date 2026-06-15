@@ -26,7 +26,7 @@ _nrp.__bit_generator_ctor = _safe_bg_ctor
 
 # Patch MT19937 to ignore incompatible state dicts
 _MT = _nr.MT19937
-_orig_mt_setstate = _MT.__setstate__  if hasattr(_MT, '__setstate__') else None
+_orig_mt_setstate = getattr(_MT, '__setstate__', None)
 def _safe_mt_setstate(self, state):
     try:
         if _orig_mt_setstate:
@@ -36,17 +36,24 @@ def _safe_mt_setstate(self, state):
     except (ValueError, TypeError, KeyError):
         # State format mismatch — reinitialise with a fixed seed
         self.__init__(seed=42)
-_MT.__setstate__ = _safe_mt_setstate
+try:
+    _MT.__setstate__ = _safe_mt_setstate
+except TypeError:
+    pass
 
 # Patch numpy.random.RandomState to handle old state tuples
 _RS = np.random.RandomState
-_orig_rs_setstate = _RS.__setstate__
+_orig_rs_setstate = getattr(_RS, '__setstate__', None)
 def _safe_rs_setstate(self, state):
     try:
-        _orig_rs_setstate(self, state)
+        if _orig_rs_setstate:
+            _orig_rs_setstate(self, state)
     except (ValueError, TypeError, KeyError):
         self.__init__()          # reset to default state
-_RS.__setstate__ = _safe_rs_setstate
+try:
+    _RS.__setstate__ = _safe_rs_setstate
+except TypeError:
+    pass
 
 # ── Load All Models ──
 BASE = os.path.join(os.path.dirname(__file__), "models")
