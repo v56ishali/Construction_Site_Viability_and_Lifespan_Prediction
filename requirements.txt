@@ -1,8 +1,8 @@
 flask
 requests
 pandas
-numpy<2.0.0
-scikit-learn
+numpy
+scikit-learn==1.8.0
 xgboost
 reportlab
 flask-jwt-extended
